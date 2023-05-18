@@ -30,6 +30,8 @@ def getAreaWindow(shared_dictionary):
         result = geometry.split("+")
         result[0] = result[0].split("x")
         result = flatten_list(result)
+        result[2] -= result[2] - window.winfo_rootx()
+        result[3] -= result[3] - window.winfo_rooty()
         if shared_dictionary["coordinates"] != result:
             shared_dictionary["coordinates"] = result
 
