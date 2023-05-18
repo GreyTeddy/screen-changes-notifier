@@ -4,6 +4,12 @@ import threading
 from PIL import ImageGrab, ImageTk
 from time import sleep
 import numpy as np
+import platform
+os_name = platform.system()
+if os_name == "Windows":
+    import winsound
+else:
+    from playsound import playsound
 
 
 def flatten_list(nested_list):
@@ -132,12 +138,16 @@ def createAndShowControlWindow(shared_dictionary, start_detecting_event,raise_st
 
 
 def handleFoundChange(screen_changed_event,exit_program_event):
-    # Get data from the queue
+    wav_file = "camera_click.wav"
     while True:
         screen_changed_event.wait()
         screen_changed_event.clear()
         print("It Has Changed!!!")
         print("!!")
+        if os_name == "Windows":
+            winsound.PlaySound(wav_file, winsound.SND_FILENAME)
+        else:
+            playsound(wav_file)
 
     exit_program_event.set()
 
