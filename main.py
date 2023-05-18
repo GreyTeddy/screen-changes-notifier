@@ -92,6 +92,7 @@ def createAndShowControlWindow(shared_dictionary, start_detecting_event,raise_st
         print("startButtonClick")
         if buttons_are_raised[0]:
             start_button_click.config(text="Checking",relief=tk.SUNKEN)
+            getScreenPart(shared_dictionary)
             shared_dictionary["check"] = True
             buttons_are_raised[0] = False
         else:
