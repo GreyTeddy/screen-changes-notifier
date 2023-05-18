@@ -18,6 +18,7 @@ def flatten_list(nested_list):
 
 def getAreaWindow(shared_dictionary):
     window = tk.Tk()
+    window.title("Select the Area")
     window.attributes("-alpha", 0.4)
     window.wm_attributes("-topmost", 1)
     window.configure(bg="")
@@ -45,7 +46,7 @@ def getAreaWindow(shared_dictionary):
 
 def setScreenPart(shared_dictionary, screen_changed_event,raise_start_button_event):
     window = tk.Tk()
-
+    window.title("Select the Area")
     label = tk.Label(window)
     window.wm_attributes("-topmost", 1)
     label.pack()
@@ -109,6 +110,7 @@ def createAndShowControlWindow(shared_dictionary, start_detecting_event,raise_st
 
     window = tk.Tk()
     window.wm_attributes("-topmost", 1)
+    window.title("Controls")
 
     start_button_click = tk.Button(window, text="Start", command=startButtonClick, width=15, height=4)
     start_button_click.pack(side=tk.LEFT, expand=True)
