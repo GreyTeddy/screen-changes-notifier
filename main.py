@@ -1,5 +1,6 @@
 import tkinter as tk
 import multiprocessing
+import threading
 from PIL import ImageGrab, ImageTk
 from time import sleep
 import numpy as np
@@ -42,15 +43,14 @@ def getAreaWindow(shared_dictionary):
     window.mainloop()
 
 
-def setScreenPart(shared_dictionary, screen_changed_event):
+def setScreenPart(shared_dictionary, screen_changed_event,raise_start_button_event):
     window = tk.Tk()
 
     label = tk.Label(window)
     window.wm_attributes("-topmost", 1)
     label.pack()
     def checkImage():
-        width, height, x, y = shared_dictionary["coordinates"]
-        screenshot = ImageGrab.grab(bbox=(x, y, x + width, y + height))
+        screenshot = getScreenPart(shared_dictionary)
         pixels = np.array(screenshot)
         screenshot_tk = ImageTk.PhotoImage(screenshot)
 
@@ -59,58 +59,95 @@ def setScreenPart(shared_dictionary, screen_changed_event):
         label.image = screenshot_tk
         if not np.array_equal(pixels, shared_dictionary["image"]):
             shared_dictionary["image"] = pixels
-            screen_changed_event.set()
-        window.after(100, checkImage)
+            if shared_dictionary["check"]:
+                screen_changed_event.set()
+                shared_dictionary["check"] = shared_dictionary["check_continously"]
+                if not shared_dictionary["check"]:
+                    raise_start_button_event.set()
+        window.after(10, checkImage)
     
     checkImage()
     window.mainloop()
 
-        
+def getScreenPart(shared_dictionary):
+    width, height, x, y = shared_dictionary["coordinates"]
+    return ImageGrab.grab(bbox=(x, y, x + width, y + height))
+  
 
+def createAndShowControlWindow(shared_dictionary, start_detecting_event,raise_start_button_event):
 
-def createAndShowControlWindow(shared_dictionary, start_detecting_event):
-
-    def button1_click():
-        print("button 1 not implemented")
+    buttons_are_raised = [True,True]
+    def startButtonClick():
+        print("startButtonClick")
+        if buttons_are_raised[0]:
+            start_button_click.config(text="Checking",relief=tk.SUNKEN)
+            shared_dictionary["check"] = True
+            buttons_are_raised[0] = False
+        else:
+            start_button_click.config(text="Start",relief=tk.RAISED)
+            shared_dictionary["check"] = False
+            buttons_are_raised[0] = True
     
-    def button2_click():
-        print("button 2 not implemented")
+    def continousButtonClick():
+        print("continousButtonClick")
+        if buttons_are_raised[1]:
+            continous_button_click.config(text="Checking\nContinously",relief=tk.SUNKEN)
+            shared_dictionary["check_continously"] = True
+            buttons_are_raised[1] = False
+        else:
+            continous_button_click.config(text="Check\nContinously",relief=tk.RAISED)
+            shared_dictionary["check_continously"] = False
+            buttons_are_raised[1] = True
+
+    def checkForStoppingChecking():
+        while True:
+            raise_start_button_event.wait()
+            raise_start_button_event.clear()
+            start_button_click.config(text="Start",relief=tk.RAISED)
+            shared_dictionary["check"] = False
+            buttons_are_raised[0] = True
 
     window = tk.Tk()
     window.wm_attributes("-topmost", 1)
-    # Create Button 1
-    button1 = tk.Button(window, text="Start", command=button1_click, width=15, height=4)
-    button1.pack(side=tk.LEFT)
 
-    # Create Button 2
-    button2 = tk.Button(window, text="Continous", command=button2_click, width=15, height=4)
-    button2.pack(side=tk.LEFT)
+    start_button_click = tk.Button(window, text="Start", command=startButtonClick, width=15, height=4)
+    start_button_click.pack(side=tk.LEFT, expand=True)
+
+    continous_button_click = tk.Button(window, text="Checking\nContinously", command=continousButtonClick, width=15, height=4)
+    continous_button_click.pack(side=tk.RIGHT,expand=True)
     
+    start_button_raise_check= threading.Thread(target=checkForStoppingChecking)
+    start_button_raise_check.daemon = True
+    start_button_raise_check.start()
     window.mainloop()
 
 def main():
     manager = multiprocessing.Manager()
     shared_dictionary = manager.dict()
     shared_dictionary["coordinates"] = [0, 0, 0, 0]
+    shared_dictionary["check_continously"] = False
+    shared_dictionary["check"] = False
     shared_dictionary["image"] = np.array(ImageGrab.grab())
     screen_changed_event = multiprocessing.Event()
     start_detecting_event = multiprocessing.Event()
+    raise_start_button_event = multiprocessing.Event()
 
     # start processes
+
+    create_and_show_control_window = multiprocessing.Process(
+        target=createAndShowControlWindow, args=(shared_dictionary, start_detecting_event,raise_start_button_event)
+    )
+    create_and_show_control_window.start()
+
     get_dimmensions_window = multiprocessing.Process(
         target=getAreaWindow, args=(shared_dictionary,)
     )
     get_dimmensions_window.start()
 
     get_dimmensions_window = multiprocessing.Process(
-        target=setScreenPart, args=(shared_dictionary, screen_changed_event)
+        target=setScreenPart, args=(shared_dictionary, screen_changed_event,raise_start_button_event)
     )
     get_dimmensions_window.start()
-
-    create_and_show_control_window = multiprocessing.Process(
-        target=createAndShowControlWindow, args=(shared_dictionary, start_detecting_event)
-    )
-    create_and_show_control_window.start()
 
     # main process
     while True:
