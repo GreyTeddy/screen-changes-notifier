@@ -20,7 +20,7 @@ def getAreaWindow(shared_dictionary):
     window.attributes("-alpha", 0.4)
     window.wm_attributes("-topmost", 1)
     window.configure(bg="")
-    window.config(bg="#000000")
+    window.config(bg="#FFFFFF")
     window.geometry("300x300")
 
     def printWindowDimensions():
