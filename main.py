@@ -16,7 +16,7 @@ def flatten_list(nested_list):
     return flattened
 
 
-def getAreaWindow(shared_dictionary):
+def getAreaWindow(shared_dictionary,exit_program_event):
     window = tk.Tk()
     window.title("Select the Area")
     window.attributes("-alpha", 0.4)
@@ -42,9 +42,11 @@ def getAreaWindow(shared_dictionary):
     printWindowDimensions()
 
     window.mainloop()
+    exit_program_event.set()
+    exit()
 
 
-def setScreenPart(shared_dictionary, screen_changed_event,raise_start_button_event):
+def setScreenPart(shared_dictionary, screen_changed_event,raise_start_button_event,exit_program_event):
     window = tk.Tk()
     window.title("Select the Area")
     label = tk.Label(window)
@@ -69,13 +71,15 @@ def setScreenPart(shared_dictionary, screen_changed_event,raise_start_button_eve
     
     checkImage()
     window.mainloop()
+    exit_program_event.set()
+    exit()
 
 def getScreenPart(shared_dictionary):
     width, height, x, y = shared_dictionary["coordinates"]
     return ImageGrab.grab(bbox=(x, y, x + width, y + height))
   
 
-def createAndShowControlWindow(shared_dictionary, start_detecting_event,raise_start_button_event):
+def createAndShowControlWindow(shared_dictionary, start_detecting_event,raise_start_button_event,exit_program_event):
 
     buttons_are_raised = [True,True]
     def startButtonClick():
@@ -122,6 +126,21 @@ def createAndShowControlWindow(shared_dictionary, start_detecting_event,raise_st
     start_button_raise_check.daemon = True
     start_button_raise_check.start()
     window.mainloop()
+    exit_program_event.set()
+    exit()
+
+
+
+def handleFoundChange(screen_changed_event,exit_program_event):
+    # Get data from the queue
+    while True:
+        screen_changed_event.wait()
+        screen_changed_event.clear()
+        print("It Has Changed!!!")
+        print("!!")
+
+    exit_program_event.set()
+
 
 def main():
     manager = multiprocessing.Manager()
@@ -133,34 +152,32 @@ def main():
     screen_changed_event = multiprocessing.Event()
     start_detecting_event = multiprocessing.Event()
     raise_start_button_event = multiprocessing.Event()
-
+    exit_program_event = multiprocessing.Event()
     # start processes
 
     create_and_show_control_window = multiprocessing.Process(
-        target=createAndShowControlWindow, args=(shared_dictionary, start_detecting_event,raise_start_button_event)
+        target=createAndShowControlWindow, args=(shared_dictionary, start_detecting_event,raise_start_button_event,exit_program_event)
     )
     create_and_show_control_window.start()
 
     get_dimmensions_window = multiprocessing.Process(
-        target=getAreaWindow, args=(shared_dictionary,)
+        target=getAreaWindow, args=(shared_dictionary,exit_program_event)
     )
     get_dimmensions_window.start()
 
     get_dimmensions_window = multiprocessing.Process(
-        target=setScreenPart, args=(shared_dictionary, screen_changed_event,raise_start_button_event)
+        target=setScreenPart, args=(shared_dictionary, screen_changed_event,raise_start_button_event,exit_program_event)
     )
     get_dimmensions_window.start()
 
-    # main process
-    while True:
-        # Get data from the queue
-        screen_changed_event.wait()
-        screen_changed_event.clear()
-        print("It Has Changed!!!")
-        print("!!")
-        coordinates = shared_dictionary["coordinates"]
-        if coordinates == "exit":
-            exit()
+    handle_found_change = multiprocessing.Process(
+        target=handleFoundChange, args=(screen_changed_event,exit_program_event)
+    )
+    handle_found_change.start()
+
+    # wait for exit
+    exit_program_event.wait()
+    get_dimmensions_window
 
 
 if __name__ == "__main__":
