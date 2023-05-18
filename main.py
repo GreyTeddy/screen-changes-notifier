@@ -41,22 +41,58 @@ def getAreaWindow(shared_dictionary):
 
 
 def setScreenPart(shared_dictionary, screen_changed_event):
-    while True:
+    window = tk.Tk()
+
+    label = tk.Label(window)
+    window.wm_attributes("-topmost", 1)
+    label.pack()
+    def checkImage():
         width, height, x, y = shared_dictionary["coordinates"]
-        # Capture the screen part within the specified dimensions
         screenshot = ImageGrab.grab(bbox=(x, y, x + width, y + height))
         pixels = np.array(screenshot)
+        screenshot_tk = ImageTk.PhotoImage(screenshot)
+
+        # Update the image of the label
+        label.config(image=screenshot_tk)
+        label.image = screenshot_tk
         if not np.array_equal(pixels, shared_dictionary["image"]):
             shared_dictionary["image"] = pixels
             screen_changed_event.set()
+        window.after(100, checkImage)
+    
+    checkImage()
+    window.mainloop()
+
+        
 
 
-if __name__ == "__main__":
+def createAndShowControlWindow(shared_dictionary, start_detecting_event):
+
+    def button1_click():
+        print("button 1 not implemented")
+    
+    def button2_click():
+        print("button 2 not implemented")
+
+    window = tk.Tk()
+    window.wm_attributes("-topmost", 1)
+    # Create Button 1
+    button1 = tk.Button(window, text="Start", command=button1_click, width=15, height=4)
+    button1.pack(side=tk.LEFT)
+
+    # Create Button 2
+    button2 = tk.Button(window, text="Continous", command=button2_click, width=15, height=4)
+    button2.pack(side=tk.LEFT)
+    
+    window.mainloop()
+
+def main():
     manager = multiprocessing.Manager()
     shared_dictionary = manager.dict()
     shared_dictionary["coordinates"] = [0, 0, 0, 0]
     shared_dictionary["image"] = np.array(ImageGrab.grab())
     screen_changed_event = multiprocessing.Event()
+    start_detecting_event = multiprocessing.Event()
 
     # start processes
     get_dimmensions_window = multiprocessing.Process(
@@ -69,6 +105,11 @@ if __name__ == "__main__":
     )
     get_dimmensions_window.start()
 
+    create_and_show_control_window = multiprocessing.Process(
+        target=createAndShowControlWindow, args=(shared_dictionary, start_detecting_event)
+    )
+    create_and_show_control_window.start()
+
     # main process
     while True:
         # Get data from the queue
@@ -79,3 +120,7 @@ if __name__ == "__main__":
         coordinates = shared_dictionary["coordinates"]
         if coordinates == "exit":
             exit()
+
+
+if __name__ == "__main__":
+    main()
