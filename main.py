@@ -5,6 +5,7 @@ from PIL import ImageGrab, ImageTk
 from time import sleep
 import numpy as np
 import platform
+
 os_name = platform.system()
 if os_name == "Windows":
     import winsound
@@ -22,7 +23,7 @@ def flatten_list(nested_list):
     return flattened
 
 
-def getAreaWindow(shared_dictionary,exit_program_event):
+def getAreaWindow(shared_dictionary, exit_program_event):
     window = tk.Tk()
     window.title("Select the Area")
     window.attributes("-alpha", 0.4)
@@ -52,12 +53,18 @@ def getAreaWindow(shared_dictionary,exit_program_event):
     exit()
 
 
-def setScreenPart(shared_dictionary, screen_changed_event,raise_start_button_event,exit_program_event):
+def setScreenPart(
+    shared_dictionary,
+    screen_changed_event,
+    raise_start_button_event,
+    exit_program_event,
+):
     window = tk.Tk()
     window.title("Select the Area")
     label = tk.Label(window)
     window.wm_attributes("-topmost", 1)
     label.pack()
+
     def checkImage():
         screenshot = getScreenPart(shared_dictionary)
         pixels = np.array(screenshot)
@@ -74,40 +81,48 @@ def setScreenPart(shared_dictionary, screen_changed_event,raise_start_button_eve
                 if not shared_dictionary["check"]:
                     raise_start_button_event.set()
         window.after(10, checkImage)
-    
+
     checkImage()
     window.mainloop()
     exit_program_event.set()
     exit()
 
+
 def getScreenPart(shared_dictionary):
     width, height, x, y = shared_dictionary["coordinates"]
     return ImageGrab.grab(bbox=(x, y, x + width, y + height))
-  
 
-def createAndShowControlWindow(shared_dictionary, start_detecting_event,raise_start_button_event,exit_program_event):
 
-    buttons_are_raised = [True,True]
+def createAndShowControlWindow(
+    shared_dictionary,
+    start_detecting_event,
+    raise_start_button_event,
+    exit_program_event,
+):
+    buttons_are_raised = [True, True]
+
     def startButtonClick():
         print("startButtonClick")
         if buttons_are_raised[0]:
-            start_button_click.config(text="Checking",relief=tk.SUNKEN)
+            start_button_click.config(text="Checking", relief=tk.SUNKEN)
             getScreenPart(shared_dictionary)
             shared_dictionary["check"] = True
             buttons_are_raised[0] = False
         else:
-            start_button_click.config(text="Start",relief=tk.RAISED)
+            start_button_click.config(text="Start", relief=tk.RAISED)
             shared_dictionary["check"] = False
             buttons_are_raised[0] = True
-    
+
     def continousButtonClick():
         print("continousButtonClick")
         if buttons_are_raised[1]:
-            continous_button_click.config(text="Checking\nContinously",relief=tk.SUNKEN)
+            continous_button_click.config(
+                text="Checking\nContinously", relief=tk.SUNKEN
+            )
             shared_dictionary["check_continously"] = True
             buttons_are_raised[1] = False
         else:
-            continous_button_click.config(text="Check\nContinously",relief=tk.RAISED)
+            continous_button_click.config(text="Check\nContinously", relief=tk.RAISED)
             shared_dictionary["check_continously"] = False
             buttons_are_raised[1] = True
 
@@ -115,7 +130,7 @@ def createAndShowControlWindow(shared_dictionary, start_detecting_event,raise_st
         while True:
             raise_start_button_event.wait()
             raise_start_button_event.clear()
-            start_button_click.config(text="Start",relief=tk.RAISED)
+            start_button_click.config(text="Start", relief=tk.RAISED)
             shared_dictionary["check"] = False
             buttons_are_raised[0] = True
 
@@ -123,13 +138,21 @@ def createAndShowControlWindow(shared_dictionary, start_detecting_event,raise_st
     window.wm_attributes("-topmost", 1)
     window.title("Controls")
 
-    start_button_click = tk.Button(window, text="Start", command=startButtonClick, width=15, height=4)
+    start_button_click = tk.Button(
+        window, text="Start", command=startButtonClick, width=15, height=4
+    )
     start_button_click.pack(side=tk.LEFT, expand=True)
 
-    continous_button_click = tk.Button(window, text="Checking\nContinously", command=continousButtonClick, width=15, height=4)
-    continous_button_click.pack(side=tk.RIGHT,expand=True)
-    
-    start_button_raise_check= threading.Thread(target=checkForStoppingChecking)
+    continous_button_click = tk.Button(
+        window,
+        text="Checking\nContinously",
+        command=continousButtonClick,
+        width=15,
+        height=4,
+    )
+    continous_button_click.pack(side=tk.RIGHT, expand=True)
+
+    start_button_raise_check = threading.Thread(target=checkForStoppingChecking)
     start_button_raise_check.daemon = True
     start_button_raise_check.start()
     window.mainloop()
@@ -137,8 +160,7 @@ def createAndShowControlWindow(shared_dictionary, start_detecting_event,raise_st
     exit()
 
 
-
-def handleFoundChange(screen_changed_event,exit_program_event):
+def handleFoundChange(screen_changed_event, exit_program_event):
     wav_file = "camera_click.wav"
     while True:
         screen_changed_event.wait()
@@ -167,22 +189,34 @@ def main():
     # start processes
 
     create_and_show_control_window = multiprocessing.Process(
-        target=createAndShowControlWindow, args=(shared_dictionary, start_detecting_event,raise_start_button_event,exit_program_event)
+        target=createAndShowControlWindow,
+        args=(
+            shared_dictionary,
+            start_detecting_event,
+            raise_start_button_event,
+            exit_program_event,
+        ),
     )
     create_and_show_control_window.start()
 
     get_dimmensions_window = multiprocessing.Process(
-        target=getAreaWindow, args=(shared_dictionary,exit_program_event)
+        target=getAreaWindow, args=(shared_dictionary, exit_program_event)
     )
     get_dimmensions_window.start()
 
     get_dimmensions_window = multiprocessing.Process(
-        target=setScreenPart, args=(shared_dictionary, screen_changed_event,raise_start_button_event,exit_program_event)
+        target=setScreenPart,
+        args=(
+            shared_dictionary,
+            screen_changed_event,
+            raise_start_button_event,
+            exit_program_event,
+        ),
     )
     get_dimmensions_window.start()
 
     handle_found_change = multiprocessing.Process(
-        target=handleFoundChange, args=(screen_changed_event,exit_program_event)
+        target=handleFoundChange, args=(screen_changed_event, exit_program_event)
     )
     handle_found_change.start()
 
